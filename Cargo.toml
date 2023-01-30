@@ -1,0 +1,7 @@
+[package]
+name = "env-to-props"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+java-properties = "=1.4.1"
