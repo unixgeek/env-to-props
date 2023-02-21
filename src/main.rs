@@ -1,41 +1,26 @@
-use java_properties::PropertiesWriter;
-use std::collections::HashMap;
 use std::env;
 use std::fs::File;
-use std::io::BufWriter;
+use std::io::{BufReader, BufWriter};
 
-// fn main() {
-//     let mut writer = BufWriter::new(File::create("/tmp/test.properties").expect("properties file"));
-//
-//     env::vars()
-//         .filter(|(key, _)| key.starts_with("TALEND_"))
-//         .for_each(|(key, value)| {
-//             let property_name = key.strip_prefix("TALEND_").expect("prefix");
-//             writeln!(writer, "{property_name}={value}").expect("write");
-//         });
-// }
+const PKG_NAME: &str = env!("CARGO_PKG_NAME");
+const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() {
-    // let props: HashMap<String, String> = env::vars()
-    //     .filter(|(key, _)| key.starts_with("TALEND_"))
-    //     .map(|(key, value)| {
-    //         let property_name = key.strip_prefix("TALEND_").expect("prefix");
-    //         (property_name.to_string(), value)
-    //     })
-    //     .collect();
-    //
-    // let writer = PropertiesWriter::new(BufWriter::new(file::create("/tmp/test.properties")));
-    //
-    // java_properties::write(writer, &props).expect("writing file");
+    println!("{PKG_NAME} {PKG_VERSION}");
 
-    let mut writer = PropertiesWriter::new(BufWriter::new(
-        File::create("/tmp/test.properties").expect("creating file"),
-    ));
+    let args: Vec<String> = env::args().collect();
+    let context_file = args.get(1).expect("No context file provided");
+    let file = File::open(context_file).expect("Opening context file");
+    let mut context = java_properties::read(BufReader::new(file)).expect("Reading context file");
 
     env::vars()
-        .filter(|(key, _)| key.starts_with("TALEND_"))
+        .filter(|(key, _)| key.starts_with("CONTEXT_"))
         .for_each(|(key, value)| {
-            let property_name = key.strip_prefix("TALEND_").expect("prefix");
-            writer.write(property_name, &value).expect("write the prop");
+            let property_name = key.strip_prefix("CONTEXT_").expect("Stripping prefix");
+            println!("Overriding {property_name}");
+            context.insert(property_name.to_string(), value);
         });
+
+    let file = File::create(context_file).expect("Opening context file");
+    java_properties::write(BufWriter::new(file), &context).expect("Writing context file");
 }
